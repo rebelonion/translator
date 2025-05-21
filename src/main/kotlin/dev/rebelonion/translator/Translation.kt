@@ -1,10 +1,10 @@
-package me.bush.translator
+package dev.rebelonion.translator
 
-import io.ktor.http.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonArray
+import okhttp3.HttpUrl
 import java.util.Objects.hash
 
 /**
@@ -33,7 +33,7 @@ class Translation internal constructor(
     /**
      * The url that the translation request was made to.
      */
-    val url: Url
+    val url: HttpUrl
 ) {
     /**
      * The data received from Google's API, as a [JsonArray].

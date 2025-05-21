@@ -1,12 +1,18 @@
-package me.bush.translator
+package dev.rebelonion.translator
 
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * [A translator that uses Google's translate API.](https://github.com/therealbush/translator)
@@ -18,25 +24,15 @@ import kotlinx.coroutines.runBlocking
  *                  This should be kept as default unless you know what you are doing.
  */
 class Translator(
-    private val client: HttpClient = HttpClient(CIO) {
-        install(UserAgent) {
-            agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    private val client: OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val originalRequest = chain.request()
+            val requestWithUserAgent = originalRequest.newBuilder()
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .build()
+            chain.proceed(requestWithUserAgent)
         }
-        HttpResponseValidator {
-            // This is run for all responses
-            validateResponse { response ->
-                if (!response.status.isSuccess()) {
-                    throw TranslationException("Error caught from HTTP request: ${response.status}")
-                }
-            }
-            // This is run only when an exception is thrown, including our custom ones
-            handleResponseExceptionWithRequest { cause, _ ->
-                if (cause !is TranslationException) {
-                    throw TranslationException("Exception caught from HTTP request", cause)
-                }
-            }
-        }
-    }
+        .build()
 ) {
 
     /**
@@ -66,14 +62,61 @@ class Translator(
         require(target != Language.AUTO) {
             "The target language cannot be Language.AUTO!"
         }
-        val response = client.get("https://translate.googleapis.com/translate_a/single") {
-            constantParameters()
-            parameter("sl", source.code)
-            parameter("tl", target.code)
-            parameter("hl", target.code)
-            parameter("q", text)
+        
+        val httpUrl = "https://translate.googleapis.com/translate_a/single".toHttpUrl()
+            .newBuilder()
+            .apply {
+                // Add constant parameters
+                addQueryParameter("client", "gtx")
+                dtParams.forEach { addQueryParameter("dt", it) }
+                addQueryParameter("ie", "UTF-8")
+                addQueryParameter("oe", "UTF-8")
+                addQueryParameter("otf", "1")
+                addQueryParameter("ssel", "0")
+                addQueryParameter("tsel", "0")
+                addQueryParameter("tk", "bushissocool")
+                
+                // Add translation-specific parameters
+                addQueryParameter("sl", source.code)
+                addQueryParameter("tl", target.code)
+                addQueryParameter("hl", target.code)
+                addQueryParameter("q", text)
+            }
+            .build()
+            
+        val request = Request.Builder()
+            .url(httpUrl)
+            .get()
+            .build()
+            
+        val response = withContext(Dispatchers.IO) {
+            client.newCall(request).await()
         }
-        return Translation(target, text, response.bodyAsText(), response.request.url)
+        
+        if (!response.isSuccessful) {
+            throw TranslationException("Error caught from HTTP request: ${response.code}")
+        }
+        
+        val responseBody = response.body?.string() 
+            ?: throw TranslationException("Response body was null")
+            
+        return Translation(target, text, responseBody, httpUrl)
+    }
+    
+    private suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->
+        continuation.invokeOnCancellation {
+            cancel()
+        }
+        
+        enqueue(object : Callback {
+            override fun onResponse(call: Call, response: Response) {
+                continuation.resume(response)
+            }
+            
+            override fun onFailure(call: Call, e: IOException) {
+                continuation.resumeWithException(TranslationException("Exception caught from HTTP request", e))
+            }
+        })
     }
 
     /**
@@ -157,18 +200,6 @@ class Translator(
 
 // I didn't find these myself, check out https://github.com/ssut/py-googletrans
 private val dtParams = arrayOf("at", "bd", "ex", "ld", "md", "qca", "rw", "rm", "ss", "t")
-
-// ^^^
-private fun HttpRequestBuilder.constantParameters() {
-    parameter("client", "gtx")
-    dtParams.forEach { parameter("dt", it) }
-    parameter("ie", "UTF-8")
-    parameter("oe", "UTF-8")
-    parameter("otf", 1)
-    parameter("ssel", 0)
-    parameter("tsel", 0)
-    parameter("tk", "bushissocool")
-}
 
 /**
  * Indicates an exception/error relating to the translation's HTTP request.

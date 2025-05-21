@@ -1,4 +1,4 @@
-package me.bush.translator
+package dev.rebelonion.translator
 
 import org.junit.jupiter.api.Test
 

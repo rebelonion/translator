@@ -1,11 +1,16 @@
 # TRANSLATOR
 
-<img src="https://sloc.xyz/github/therealbush/translator" alt="lines of code"/> <img src="https://img.shields.io/github/languages/code-size/therealbush/translator" alt="code size"/> [![](https://jitpack.io/v/therealbush/translator.svg)](https://jitpack.io/#therealbush/translator) [![](https://jitpack.io/v/therealbush/translator/month.svg)](https://jitpack.io/#therealbush/translator)<br> 
+<img src="https://sloc.xyz/github/rebelonion/translator" alt="lines of code"/> <img src="https://img.shields.io/github/languages/code-size/rebelonion/translator" alt="code size"/> [![](https://jitpack.io/v/rebelonion/translator.svg)](https://jitpack.io/#rebelonion/translator) [![](https://jitpack.io/v/rebelonion/translator/month.svg)](https://jitpack.io/#rebelonion/translator)<br> 
 
 *A simple and free Google Translate library for Kotlin/JVM and Java.*
 
+Fork with the following improvements:
+- Updated to Java 17 and Kotlin 2.1.0
+- Replaced Ktor with OkHttp for more lightweight dependency management
+- Simplified codebase while maintaining the same API
+
 ## What?
-A library that uses Google Translate and [Ktor](https://github.com/ktorio/ktor) to translate text.
+A library that uses Google Translate and [OkHttp](https://square.github.io/okhttp/) to translate text.
 
 The discovery of an unofficial API endpoint and correct parameters are not my findings, they are from [Py-Googletrans](https://github.com/ssut/py-googletrans), a great library with a similar goal, but for Python.
 ## Why?
@@ -21,7 +26,7 @@ repositories {
 ```
 ```groovy
 dependencies {
-    implementation 'com.github.therealbush:translator:1.1.1'
+    implementation 'com.github.rebelonion:translator:1.1.2'
 }
 ```
 ### Usage
@@ -34,7 +39,7 @@ println(translation.sourceLanguage) // English
 ```
 - If you are calling from a non `suspend` function, you can use `translateBlocking(...)`
 - If you want to receive a `Result<Translation>`, you can use `translateCatching(...)`
-- If you want to configure your own `HttpClient`, you can pass it to `Translator(client)`
+- If you want to configure your own `OkHttpClient`, you can pass it to `Translator(client)`
 
 
 - Operator function `Language.invoke()` can be used to resolve a `Language` enum from a language name, code, or partial name or code:
@@ -51,7 +56,8 @@ Only `translateBlocking(...)` should be called from Java code. The other methods
 
 ## Credits
 - This would not be possible without [Py-Googletrans](https://github.com/ssut/py-googletrans)
-- [Ktor](https://github.com/ktorio/ktor) is a very easy to use network library
+- [OkHttp](https://square.github.io/okhttp/) is a lightweight and efficient HTTP client for JVM and Android
+- The original version used [Ktor](https://github.com/ktorio/ktor)
 - Google Translate, but they should be cool and make their API free :)
 
 ## Note

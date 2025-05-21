@@ -1,4 +1,4 @@
-package me.bush.translator
+package dev.rebelonion.translator
 
 /**
  * All languages recognized by Google Translate.
